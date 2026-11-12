@@ -68,6 +68,18 @@ export default async function PortalHome() {
         </div>
       ) : null}
 
+      <div className="flex flex-wrap gap-3">
+        <Link href="/portal/fund" className="btn-primary">
+          Deposit funds
+        </Link>
+        <Link href="/portal/redeem" className="btn-ghost">
+          Withdraw
+        </Link>
+        <Link href="/portal/subscribe" className="btn-ghost">
+          Subscribe
+        </Link>
+      </div>
+
       <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
         <div className="bg-surface px-5 py-5">
           <p className="text-[11px] uppercase tracking-[0.16em] text-mist">Capital account</p>
