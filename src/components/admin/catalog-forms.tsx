@@ -10,6 +10,7 @@ import {
   deleteFundingMethod,
   savePosition,
   closePosition,
+  maturePosition as maturePositionAction,
   type CatalogState
 } from '@/actions/catalog';
 
@@ -295,6 +296,29 @@ export function ClosePositionForm({ id }: { id: string }) {
       <input type="hidden" name="id" value={id} />
       <button type="submit" className="text-[11.5px] text-white/60 hover:text-white">close</button>
       {state.error ? <span className="ml-1 text-[10.5px] text-rose-300">{state.error}</span> : null}
+    </form>
+  );
+}
+
+export function MatureForm({ id, today }: { id: string; today: string }) {
+  const [state, action] = useFormState(maturePositionAction, empty);
+  return (
+    <form action={action} className="grid gap-2 sm:grid-cols-2">
+      <input type="hidden" name="id" value={id} />
+      <div>
+        <label className="label">Settlement date</label>
+        <input name="date" type="date" defaultValue={today} className="input" required />
+      </div>
+      <div>
+        <label className="label">Realised gain (USD)</label>
+        <input name="realizedGain" type="number" min={0} step="0.01" defaultValue={0} className="input" required />
+      </div>
+      <div className="sm:col-span-2">
+        <label className="label">Custodian settlement reference</label>
+        <input name="reference" className="input" placeholder="STL-2026-0001" required />
+      </div>
+      <div className="sm:col-span-2"><Notice state={state} /></div>
+      <div className="sm:col-span-2"><SubmitButton className="btn-ghost">Mature &amp; release capital</SubmitButton></div>
     </form>
   );
 }
