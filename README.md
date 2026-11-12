@@ -67,12 +67,20 @@ Create a Node web service with:
 - Build: `npm ci && npx prisma generate && npx prisma migrate deploy && npm run seed && npm run build`
 - Start: `npm start`
 - Health check: `/api/health`
-- Env: `DATABASE_URL`, `AUTH_SECRET`, `APP_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `EMAIL_FROM`, `RESEND_API_KEY`
+- Env: `DATABASE_URL`, `AUTH_SECRET`, `APP_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `EMAIL_FROM`, `BREVO_API_KEY`
 
 ## Email
 
-Set `RESEND_API_KEY` and a verified `EMAIL_FROM` domain. Without a key every message is written to the
-admin outbox (`/admin/email`) and nothing is delivered — useful for staging, not for production.
+Brevo is the default provider; Resend is also supported and is used when only `RESEND_API_KEY` is present.
+
+- `BREVO_API_KEY` — Brevo v3 transactional API. `EMAIL_FROM` must be a **verified sender** in Brevo
+  (Senders & IP → Senders). Free tier allows 300 messages/day.
+- `RESEND_API_KEY` — optional alternative.
+- `EMAIL_PROVIDER` — force `brevo`, `resend` or `none`; detected from the keys when unset.
+
+Without a configured key every message is written to the admin outbox (`/admin/email`) and nothing is
+delivered — useful for staging, not for production. The outbox shows the provider's error verbatim, which
+is the fastest way to diagnose an unverified sender or a revoked key.
 
 ## Operational notes
 
