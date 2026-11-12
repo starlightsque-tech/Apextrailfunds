@@ -1,18 +1,20 @@
 # Render blueprint — https://render.com/docs/blueprint-spec
-# Create a Blueprint from this repo and Render provisions the database, web service
-# and environment wiring in one step.
+# Free-tier configuration: no card required, but note the caveats in README.md
+#   - free web services sleep after 15 minutes of inactivity (~30s cold start)
+#   - free Postgres expires 30 days after creation; swap DATABASE_URL for a
+#     permanent instance (Neon/Supabase/Render paid) before then.
 databases:
   - name: apextrailfunds-db
     databaseName: apextrailfunds
     user: apextrailfunds
-    plan: basic-256mb
+    plan: free
     region: frankfurt
 
 services:
   - type: web
     name: apextrailfunds
     runtime: node
-    plan: starter
+    plan: free
     region: frankfurt
     branch: main
     buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npm run seed && npm run build
