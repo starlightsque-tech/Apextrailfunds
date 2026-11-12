@@ -5,9 +5,13 @@ import { usePathname } from 'next/navigation';
 
 const ITEMS = [
   { href: '/portal', label: 'Overview' },
+  { href: '/portal/portfolio', label: 'Portfolio' },
   { href: '/portal/account', label: 'Capital account' },
+  { href: '/portal/invest', label: 'Programmes' },
   { href: '/portal/subscribe', label: 'Subscribe' },
+  { href: '/portal/fund', label: 'Funding' },
   { href: '/portal/redeem', label: 'Redeem' },
+  { href: '/portal/payouts', label: 'Payout methods' },
   { href: '/portal/documents', label: 'Documents' },
   { href: '/portal/profile', label: 'Profile & security' }
 ];
