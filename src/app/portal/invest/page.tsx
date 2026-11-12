@@ -51,7 +51,9 @@ export default async function InvestPage({ searchParams }: { searchParams: { pla
                   <span className="chip border-white/12 bg-white/[0.04] text-white/60">{p.riskBand}</span>
                 </div>
                 <p className="mt-3 text-[11.5px] text-mist">
-                  Min {money(p.minAmount, 'USD', 0)} · {p.liquidityDays}-day notice · {p.managementFee}% / {p.performanceFee}%
+                  {money(p.minAmount, 'USD', 0)}
+                  {p.maxAmount ? ` – ${money(p.maxAmount, 'USD', 0)}` : '+'} · {p.termMonths ? `${p.termMonths} months` : 'open-ended'} ·{' '}
+                  {p.liquidityDays}-day notice · {p.managementFee}% / {p.performanceFee}%
                 </p>
               </Link>
             ))}
@@ -63,7 +65,7 @@ export default async function InvestPage({ searchParams }: { searchParams: { pla
                 <p className="text-[13.5px] font-medium text-white">{selected.name}</p>
                 <p className="mt-2 text-[12.5px] leading-relaxed text-mist">{selected.strategy}</p>
                 <div className="mt-4">
-                  <InterestForm planId={selected.id} min={selected.minAmount} />
+                  <InterestForm planId={selected.id} min={selected.minAmount} max={selected.maxAmount ?? undefined} />
                 </div>
               </>
             ) : null}
