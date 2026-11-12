@@ -10,7 +10,37 @@ type SendArgs = {
   userId?: string | null;
 };
 
-const PROVIDER = process.env.EMAIL_PROVIDER ?? 'resend';
+/**
+ * Provider selection:
+ *   1. EMAIL_PROVIDER env var wins (resend | brevo | none)
+ *   2. otherwise whichever API key is present (Brevo preferred, then Resend)
+ *   3. otherwise "none" — messages are kept in the admin outbox, nothing is sent
+ */
+function activeProvider(): 'brevo' | 'resend' | 'none' {
+  const explicit = (process.env.EMAIL_PROVIDER ?? '').toLowerCase();
+  if (explicit === 'brevo' || explicit === 'resend' || explicit === 'none') {
+    if (explicit === 'brevo' && !process.env.BREVO_API_KEY) return 'none';
+    if (explicit === 'resend' && !process.env.RESEND_API_KEY) return 'none';
+    return explicit;
+  }
+  if (process.env.BREVO_API_KEY) return 'brevo';
+  if (process.env.RESEND_API_KEY) return 'resend';
+  return 'none';
+}
+
+export function emailProviderStatus() {
+  const provider = activeProvider();
+  return {
+    provider,
+    ready: provider !== 'none',
+    detail:
+      provider === 'brevo'
+        ? 'Brevo configured'
+        : provider === 'resend'
+          ? 'Resend configured'
+          : 'No email provider configured'
+  };
+}
 
 export async function sendEmail({ to, subject, html, template, userId }: SendArgs) {
   const settings = await getSettings();
@@ -26,8 +56,33 @@ export async function sendEmail({ to, subject, html, template, userId }: SendArg
     }
   });
 
+  const provider = activeProvider();
+
   try {
-    if (PROVIDER === 'resend' && process.env.RESEND_API_KEY) {
+    if (provider === 'brevo' && process.env.BREVO_API_KEY) {
+      const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': process.env.BREVO_API_KEY,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: settings.fundDisplayName, email: settings.fromEmail },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html
+        })
+      });
+      if (!res.ok) {
+        const detail = await res.text();
+        throw new Error(`Brevo ${res.status}: ${detail.slice(0, 300)}`);
+      }
+      await prisma.emailLog.update({ where: { id: log.id }, data: { status: 'SENT' } });
+      return { ok: true as const, queued: false };
+    }
+
+    if (provider === 'resend' && process.env.RESEND_API_KEY) {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -49,14 +104,10 @@ export async function sendEmail({ to, subject, html, template, userId }: SendArg
       return { ok: true as const, queued: false };
     }
 
-    if (PROVIDER === 'smtp-fallback') {
-      throw new Error('SMTP provider not configured');
-    }
-
     // No provider configured: the message is retained in the outbox for the admin.
     await prisma.emailLog.update({
       where: { id: log.id },
-      data: { status: 'QUEUED', error: 'No email provider configured (set RESEND_API_KEY).' }
+      data: { status: 'QUEUED', error: 'No email provider configured (set BREVO_API_KEY or RESEND_API_KEY).' }
     });
     return { ok: true as const, queued: true };
   } catch (error) {
