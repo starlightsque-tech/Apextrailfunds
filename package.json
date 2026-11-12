@@ -9,7 +9,6 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
     "seed": "node scripts/seed.mjs",
-    "seed:demo": "node scripts/seed-demo.mjs",
     "lint": "next lint"
   },
   "dependencies": {
