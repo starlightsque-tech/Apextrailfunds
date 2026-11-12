@@ -27,6 +27,11 @@ export default async function RequestsPage() {
                 <p className="text-[13px] text-white/90">{r.user.name}</p>
                 <p className="text-[11.5px] text-mist">{r.user.email} · {date(r.createdAt)}</p>
                 {r.note ? <p className="mt-1 max-w-sm text-[11.5px] text-mist">“{r.note}”</p> : null}
+                {'payoutMethodId' in r && r.payoutMethodId ? (
+                  <p className="mt-1 text-[11px] text-gold/80">payout destination on file</p>
+                ) : kind === 'redemption' ? (
+                  <p className="mt-1 text-[11px] text-rose-300/80">no payout destination</p>
+                ) : null}
               </div>
               <div className="flex items-center gap-3">
                 <span className="font-mono text-[13px] text-white">{money(r.amount, 'USD', 0)}</span>
