@@ -29,6 +29,7 @@ const planSchema = z.object({
   strategy: z.string().min(10, 'Describe the strategy in at least a sentence.').max(4000),
   riskBand: z.enum(['Low', 'Medium', 'Medium-High', 'High']),
   minAmount: z.coerce.number().int().min(1),
+  maxAmount: z.coerce.number().int().min(0).optional(),
   targetSize: z.coerce.number().int().min(0).optional(),
   termMonths: z.coerce.number().int().min(0).max(360).optional(),
   liquidityDays: z.coerce.number().int().min(0).max(3650),
@@ -47,6 +48,7 @@ export async function savePlan(_prev: CatalogState, formData: FormData): Promise
     strategy: formData.get('strategy'),
     riskBand: formData.get('riskBand'),
     minAmount: formData.get('minAmount'),
+    maxAmount: formData.get('maxAmount') || undefined,
     targetSize: formData.get('targetSize') || undefined,
     termMonths: formData.get('termMonths') || undefined,
     liquidityDays: formData.get('liquidityDays'),
@@ -58,6 +60,9 @@ export async function savePlan(_prev: CatalogState, formData: FormData): Promise
 
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Check the programme fields.' };
   const d = parsed.data;
+  if (d.maxAmount && d.maxAmount > 0 && d.maxAmount < d.minAmount) {
+    return { error: 'Maximum per investor must be at least the minimum.' };
+  }
 
   const data = {
     name: d.name,
@@ -65,6 +70,7 @@ export async function savePlan(_prev: CatalogState, formData: FormData): Promise
     strategy: d.strategy,
     riskBand: d.riskBand,
     minAmount: d.minAmount,
+    maxAmount: d.maxAmount && d.maxAmount > 0 ? d.maxAmount : null,
     targetSize: d.targetSize || null,
     termMonths: d.termMonths || null,
     liquidityDays: d.liquidityDays,
@@ -263,6 +269,9 @@ export async function expressInterest(_prev: CatalogState, formData: FormData): 
   if (!plan || plan.status !== 'OPEN') return { error: 'That programme is not open.' };
   if (!Number.isFinite(amount) || amount < plan.minAmount) {
     return { error: `The minimum for ${plan.name} is ${plan.minAmount.toLocaleString('en-US')} USD.` };
+  }
+  if (plan.maxAmount && amount > plan.maxAmount) {
+    return { error: `The maximum per investor for ${plan.name} is ${plan.maxAmount.toLocaleString('en-US')} USD.` };
   }
 
   await prisma.planApplication.create({ data: { planId, userId: session.uid, amount, note: note || null } });
