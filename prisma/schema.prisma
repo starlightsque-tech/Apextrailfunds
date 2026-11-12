@@ -70,68 +70,58 @@ model User {
   emailOptOut   Boolean    @default(false)
   country       String?
   phone         String?
+  referralCode  String?    @unique
+  referredBy    String?
   lastLoginAt   DateTime?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
   application   Application?
   entries       LedgerEntry[]
-  documents     Document[]     @relation("DocumentOwner")
+  documents     Document[]            @relation("DocumentOwner")
   emails        EmailLog[]
   subscriptions SubscriptionRequest[]
   redemptions   RedemptionRequest[]
+  positions     Position[]
+  payoutMethods PayoutMethod[]
   auditEntries  AuditLog[]
 }
 
 model Application {
-  id              String            @id @default(cuid())
-  userId          String            @unique
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  entityType      String
-  country         String
-  accredited      Boolean           @default(false)
-  experience      String
-  intendedAmount  Int
-  referrer        String?
-  notes           String?
-  status          ApplicationStatus @default(PENDING)
-  reviewedBy      String?
-  reviewedAt      DateTime?
-  decisionNote    String?
-  createdAt       DateTime          @default(now())
+  id             String            @id @default(cuid())
+  userId         String            @unique
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entityType     String
+  country        String
+  accredited     Boolean           @default(false)
+  experience     String
+  intendedAmount Int
+  referrer       String?
+  notes          String?
+  status         ApplicationStatus @default(PENDING)
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  decisionNote   String?
+  createdAt      DateTime          @default(now())
 }
 
 model LedgerEntry {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date      DateTime
-  type      EntryType
-  amount    Decimal   @db.Decimal(18, 2)
-  units     Decimal?  @db.Decimal(18, 6)
-  navPerUnit Decimal? @db.Decimal(18, 6)
-  memo      String?
-  createdBy String?
-  createdAt DateTime  @default(now())
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date       DateTime
+  type       EntryType
+  amount     Decimal   @db.Decimal(18, 2)
+  units      Decimal?  @db.Decimal(18, 6)
+  navPerUnit Decimal?  @db.Decimal(18, 6)
+  memo       String?
+  createdBy  String?
+  createdAt  DateTime  @default(now())
 
   @@index([userId, date])
 }
 
 model SubscriptionRequest {
-  id         String             @id @default(cuid())
-  userId     String
-  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  amount     Int
-  status     SubscriptionStatus @default(REQUESTED)
-  note       String?
-  adminNote  String?
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
-
-  @@index([userId])
-}
-
-model RedemptionRequest {
   id        String             @id @default(cuid())
   userId    String
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -141,6 +131,21 @@ model RedemptionRequest {
   adminNote String?
   createdAt DateTime           @default(now())
   updatedAt DateTime           @updatedAt
+
+  @@index([userId])
+}
+
+model RedemptionRequest {
+  id             String             @id @default(cuid())
+  userId         String
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount         Int
+  status         SubscriptionStatus @default(REQUESTED)
+  note           String?
+  adminNote      String?
+  payoutMethodId String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   @@index([userId])
 }
@@ -178,19 +183,19 @@ model EmailLog {
 }
 
 model PerformancePoint {
-  id         String   @id @default(cuid())
-  month      String   @unique // YYYY-MM
-  netReturn  Float
+  id          String   @id @default(cuid())
+  month       String   @unique // YYYY-MM
+  netReturn   Float
   grossReturn Float?
-  navPerUnit Float?
-  aum        Float?
-  published  Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  navPerUnit  Float?
+  aum         Float?
+  published   Boolean  @default(false)
+  createdAt   DateTime @default(now())
 }
 
 model Setting {
-  key      String   @id
-  value    String
+  key       String   @id
+  value     String
   updatedAt DateTime @updatedAt
 }
 
@@ -204,4 +209,117 @@ model AuditLog {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+enum PlanStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+enum FundingKind {
+  BANK_TRANSFER
+  CUSTODIAN_PORTAL
+  STABLECOIN
+}
+
+enum PayoutKind {
+  BANK_ACCOUNT
+  STABLECOIN_WALLET
+}
+
+/// An investment programme (share class / strategy sleeve).
+/// Deliberately has no "daily return" or guaranteed-yield field.
+model Plan {
+  id             String     @id @default(cuid())
+  name           String
+  slug           String     @unique
+  tagline        String?
+  strategy       String
+  riskBand       String     @default("Medium")
+  minAmount      Int
+  targetSize     Int?
+  termMonths     Int?
+  liquidityDays  Int        @default(30)
+  managementFee  Float      @default(1.5)
+  performanceFee Float      @default(15)
+  status         PlanStatus @default(DRAFT)
+  sortOrder      Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  positions    Position[]
+  applications PlanApplication[]
+}
+
+/// A user's expressed interest in a programme, before funding.
+model PlanApplication {
+  id        String   @id @default(cuid())
+  planId    String
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  userId    String
+  amount    Int
+  status    String   @default("INTERESTED")
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+/// A funded position in a programme. Created by the manager after settlement.
+model Position {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId     String
+  plan       Plan      @relation(fields: [planId], references: [id], onDelete: Restrict)
+  committed  Decimal   @db.Decimal(18, 2)
+  units      Decimal?  @db.Decimal(18, 6)
+  navPerUnit Decimal?  @db.Decimal(18, 6)
+  startedAt  DateTime  @default(now())
+  endedAt    DateTime?
+  status     String    @default("ACTIVE")
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// Where an investor sends subscription money. Manager-maintained, and only
+/// shown after the manager has attested it is the custodian's own account.
+model FundingMethod {
+  id                String      @id @default(cuid())
+  label             String
+  kind              FundingKind
+  currency          String      @default("USD")
+  accountName       String
+  bankName          String?
+  accountNumber     String?
+  iban              String?
+  swift             String?
+  walletAddress     String?
+  network           String?
+  referenceHint     String?
+  instructions      String?
+  custodianVerified Boolean     @default(false)
+  active            Boolean     @default(true)
+  sortOrder         Int         @default(0)
+  createdAt         DateTime    @default(now())
+}
+
+/// An investor's own payout destination, used for redemptions.
+model PayoutMethod {
+  id            String     @id @default(cuid())
+  userId        String
+  user          User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind          PayoutKind
+  label         String
+  currency      String     @default("USD")
+  accountName   String
+  bankName      String?
+  accountNumber String?
+  iban          String?
+  swift         String?
+  walletAddress String?
+  network       String?
+  createdAt     DateTime   @default(now())
+
+  @@index([userId])
 }
