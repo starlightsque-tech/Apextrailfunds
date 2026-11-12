@@ -1,9 +1,9 @@
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { getSettings } from '@/lib/settings';
-import { AlertTriangle, ShieldCheck } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
+import { ShieldCheck } from 'lucide-react';
 import { EmptyState } from '@/components/ui/Field';
+import FundingChooser from '@/components/portal/FundingChooser';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Funding' };
@@ -49,64 +49,25 @@ export default async function FundPage() {
           </EmptyState>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {methods.map((m) => (
-            <div key={m.id} className="card p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[14px] font-medium text-white">{m.label}</p>
-                  <p className="mt-1 text-[11.5px] text-mist">
-                    {m.kind.replace(/_/g, ' ').toLowerCase()} · {m.currency}
-                  </p>
-                </div>
-                {m.custodianVerified ? (
-                  <Badge tone="green">Custodian verified</Badge>
-                ) : (
-                  <Badge tone="amber">Pending verification</Badge>
-                )}
-              </div>
-
-              {!m.custodianVerified ? (
-                <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-400/25 bg-amber-400/[0.07] p-3">
-                  <AlertTriangle size={14} className="mt-0.5 shrink-0 text-amber-300" />
-                  <p className="text-[11.5px] leading-relaxed text-amber-100/85">
-                    The manager has not attested these details belong to the custodian. Confirm with the custodian
-                    directly before paying anything.
-                  </p>
-                </div>
-              ) : null}
-
-              <dl className="mt-4 space-y-2 text-[12.5px]">
-                {[
-                  ['Account name', m.accountName],
-                  ['Bank', m.bankName],
-                  ['Account number', m.accountNumber],
-                  ['IBAN', m.iban],
-                  ['SWIFT / BIC', m.swift],
-                  ['Wallet', m.walletAddress],
-                  ['Network', m.network]
-                ]
-                  .filter(([, v]) => Boolean(v))
-                  .map(([k, v]) => (
-                    <div key={k as string} className="flex items-start justify-between gap-4 border-b border-line pb-2">
-                      <dt className="text-mist">{k}</dt>
-                      <dd className="max-w-[60%] break-all text-right font-mono text-[11.5px] text-white/85">{v}</dd>
-                    </div>
-                  ))}
-                <div className="flex items-start justify-between gap-4 border-b border-line pb-2">
-                  <dt className="text-mist">Payment reference</dt>
-                  <dd className="text-right font-mono text-[11.5px] text-white/85">
-                    {m.referenceHint ? `${m.referenceHint}-${user?.email.split('@')[0]}` : user?.email}
-                  </dd>
-                </div>
-              </dl>
-
-              {m.instructions ? (
-                <p className="mt-3 text-[12px] leading-relaxed text-mist">{m.instructions}</p>
-              ) : null}
-            </div>
-          ))}
-        </div>
+        <FundingChooser
+          email={user?.email ?? ''}
+          channels={methods.map((m) => ({
+            id: m.id,
+            label: m.label,
+            kind: m.kind,
+            currency: m.currency,
+            accountName: m.accountName,
+            bankName: m.bankName,
+            accountNumber: m.accountNumber,
+            iban: m.iban,
+            swift: m.swift,
+            walletAddress: m.walletAddress,
+            network: m.network,
+            referenceHint: m.referenceHint,
+            instructions: m.instructions,
+            custodianVerified: m.custodianVerified
+          }))}
+        />
       )}
 
       <div className="flex items-start gap-3 rounded-2xl border border-line bg-white/[0.02] p-5">
