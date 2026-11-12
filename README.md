@@ -87,8 +87,11 @@ Create a Node web service with:
 
 Brevo is the default provider; Resend is also supported and is used when only `RESEND_API_KEY` is present.
 
-- `BREVO_API_KEY` — Brevo v3 transactional API. `EMAIL_FROM` must be a **verified sender** in Brevo
+- `BREVO_API_KEY` — Brevo v3 transactional API. `EMAIL_FROM` must be an **active sender** in Brevo
   (Senders & IP → Senders). Free tier allows 300 messages/day.
+  The blueprint ships with a verified mailbox sender; authenticate the `apextrailfunds.com` domain
+  (DKIM + SPF) in Brevo before switching `EMAIL_FROM` to an address on that domain, otherwise sends fail
+  with *sender not valid*.
 - `RESEND_API_KEY` — optional alternative.
 - `EMAIL_PROVIDER` — force `brevo`, `resend` or `none`; detected from the keys when unset.
 
