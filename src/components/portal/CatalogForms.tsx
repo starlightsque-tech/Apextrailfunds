@@ -77,8 +77,16 @@ export function PayoutForm() {
           <input name="walletAddress" className="input font-mono text-[12.5px]" />
         </div>
         <div>
-          <label className="label">Network (stablecoin only)</label>
-          <input name="network" className="input" placeholder="TRC20 / ERC20" />
+          <label className="label">Withdrawal network (stablecoin only)</label>
+          <select name="network" className="input" defaultValue="">
+            <option value="">— none (bank account) —</option>
+            <option value="TRC20">USDT · TRC20 (Tron)</option>
+            <option value="ERC20">USDT · ERC20 (Ethereum)</option>
+            <option value="BEP20">USDT · BEP20 (BNB Chain)</option>
+            <option value="SOL">USDT · Solana</option>
+            <option value="POLYGON">USDT · Polygon</option>
+          </select>
+          <p className="hint">Networks are listed only where the custodian supports payouts. Sending on the wrong network loses funds.</p>
         </div>
       </div>
       {state.error ? <p className="text-[12.5px] text-rose-300">{state.error}</p> : null}
