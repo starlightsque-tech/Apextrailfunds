@@ -5,7 +5,7 @@ import { getCapitalAccount } from '@/lib/account';
 import { date, money, num } from '@/lib/format';
 import { Badge, statusTone } from '@/components/ui/Badge';
 import { StatusForm, LedgerForm, DeleteEntryForm, UserEmailForm } from '@/components/admin/forms';
-import { PositionForm, ClosePositionForm } from '@/components/admin/catalog-forms';
+import { PositionForm, ClosePositionForm, MatureForm } from '@/components/admin/catalog-forms';
 import { startImpersonation } from '@/actions/admin';
 
 export const dynamic = 'force-dynamic';
@@ -166,6 +166,20 @@ export default async function InvestorDetail({ params }: { params: { id: string 
               ))}
             </tbody>
           </table>
+          {user.positions.some((p) => p.status === 'ACTIVE') ? (
+            <div className="border-t border-line p-5">
+              <p className="text-[12.5px] font-medium text-white/85">Settle a matured position</p>
+              <p className="mt-1 text-[11.5px] text-mist">
+                Releases capital back to the investor and posts only the gain the custodian has actually realised.
+              </p>
+              <div className="mt-3">
+                <MatureForm
+                  id={user.positions.find((p) => p.status === 'ACTIVE')!.id}
+                  today={today}
+                />
+              </div>
+            </div>
+          ) : null}
           <div className="border-t border-line p-5">
             {plans.length === 0 ? (
               <p className="text-[12px] text-mist">
