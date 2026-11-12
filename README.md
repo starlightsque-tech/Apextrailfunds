@@ -47,14 +47,27 @@ Optional sample data for UI review (never on production):
 npm run seed:demo         # demo.investor@example.com / demo-password-123
 ```
 
-## Deploying to Render
+## Deploying to Render (free tier)
 
 1. Push this repository to GitHub.
-2. In Render: **New → Blueprint**, select the repo. `render.yaml` provisions Postgres, the web service,
-   `AUTH_SECRET`, the database URL and the build/start commands.
+2. In Render: **New → Blueprint**, select the repo. `render.yaml` provisions a free Postgres instance,
+   the free web service, `AUTH_SECRET`, the database URL and the build/start commands. No card required.
 3. Fill the prompted values: `APP_URL` (your canonical https URL), `ADMIN_EMAIL`, `ADMIN_PASSWORD`,
-   and `RESEND_API_KEY` if you want email delivered.
+   and `BREVO_API_KEY` for email delivery.
 4. Deploy. Migrations and the admin seed run during the build; health check is `/api/health`.
+
+**Free-tier limits you should plan around**
+
+- The web service sleeps after 15 minutes of inactivity and takes ~30 seconds to wake. The first visit
+  after a quiet period will feel slow; that is the platform, not the app.
+- Render's free Postgres is deleted **30 days after creation**. Before that date, either upgrade the
+  database to a paid plan or point `DATABASE_URL` at a permanent Postgres (Neon, Supabase, Railway, or
+  Render's paid Postgres) and redeploy. The app needs no code change — `DATABASE_URL` is the only input.
+- Free instances have 512 MB RAM and a shared CPU; fine for a fund site with modest investor traffic.
+
+To swap the database later: create the new Postgres, set `DATABASE_URL` on the web service to the new
+internal connection string, then run `npx prisma migrate deploy` once (Render's build already does this on
+the next deploy).
 
 After the first deploy, sign in at `/admin` and complete **Settings → Identity**. Until the legal entity,
 jurisdiction, licence reference and custodian are filled in, the public site deliberately shows
@@ -67,6 +80,7 @@ Create a Node web service with:
 - Build: `npm ci && npx prisma generate && npx prisma migrate deploy && npm run seed && npm run build`
 - Start: `npm start`
 - Health check: `/api/health`
+- Plan: Free (or Starter for always-on)
 - Env: `DATABASE_URL`, `AUTH_SECRET`, `APP_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `EMAIL_FROM`, `BREVO_API_KEY`
 
 ## Email
