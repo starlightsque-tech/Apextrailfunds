@@ -3,6 +3,7 @@ import { date } from '@/lib/format';
 import { Badge, statusTone } from '@/components/ui/Badge';
 import { BroadcastForm, TestEmailForm } from '@/components/admin/forms';
 import { getSettings } from '@/lib/settings';
+import { emailProviderStatus } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,8 @@ export default async function AdminEmailPage() {
     prisma.emailLog.findMany({ orderBy: { createdAt: 'desc' }, take: 40 })
   ]);
 
-  const providerReady = Boolean(process.env.RESEND_API_KEY);
+  const provider = emailProviderStatus();
+  const providerReady = provider.ready;
 
   return (
     <div className="space-y-6">
@@ -28,15 +30,16 @@ export default async function AdminEmailPage() {
       {!providerReady ? (
         <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.07] px-4 py-3">
           <p className="text-[12.5px] leading-relaxed text-amber-100/90">
-            <strong>No email provider configured.</strong> Set <code className="font-mono">RESEND_API_KEY</code> and a
-            verified <code className="font-mono">EMAIL_FROM</code> in your Render environment. Until then every message
-            is stored in the outbox below and nothing is delivered.
+            <strong>No email provider configured.</strong> Set <code className="font-mono">BREVO_API_KEY</code> (or
+            <code className="font-mono"> RESEND_API_KEY</code>) and a verified <code className="font-mono">EMAIL_FROM</code>
+            sender in your Render environment. Until then every message is stored in the outbox below and nothing is
+            delivered.
           </p>
         </div>
       ) : (
         <div className="rounded-xl border border-emerald-400/25 bg-emerald-400/[0.07] px-4 py-3">
           <p className="text-[12.5px] text-emerald-200">
-            Resend is configured. Sender: {settings.fromEmail}. Provider errors appear in the outbox.
+            {provider.detail}. Sender: {settings.fromEmail}. Provider errors appear in the outbox.
           </p>
         </div>
       )}
