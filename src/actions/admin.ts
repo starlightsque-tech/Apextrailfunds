@@ -3,7 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { getSession } from '@/lib/session';
+import { getSession, setSessionCookie, type SessionPayload } from '@/lib/session';
+import { redirect } from 'next/navigation';
 import { recordAudit } from '@/lib/audit';
 import { sendApplicationDecision, sendBroadcast, sendEmail } from '@/lib/email';
 import { getSettings } from '@/lib/settings';
@@ -360,4 +361,49 @@ export async function recordDepositConfirmed(_prev: AdminState, formData: FormDa
   await recordAudit(session.uid, 'ledger.settlement_confirmed', userId, { amount });
   revalidatePath(`/admin/investors/${userId}`);
   return { ok: 'Settlement entry posted.' };
+}
+
+
+/**
+ * Support access: an administrator can open an investor's portal without their
+ * password. Every start and stop is audited, the portal shows a persistent
+ * banner, and profile/password changes are blocked for the impersonated session.
+ */
+export async function startImpersonation(formData: FormData) {
+  const session = await requireAdmin();
+  const userId = String(formData.get('userId') ?? '');
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, email: true, name: true, role: true }
+  });
+  if (!target) redirect('/admin/investors');
+  if (target.role === 'ADMIN') redirect('/admin/investors');
+
+  const payload: SessionPayload = {
+    uid: target.id,
+    role: 'INVESTOR',
+    email: target.email,
+    name: target.name,
+    imp: session.uid
+  };
+
+  await setSessionCookie(payload);
+  await recordAudit(session.uid, 'support.impersonation_started', target.id, { email: target.email });
+  redirect('/portal');
+}
+
+export async function stopImpersonation() {
+  const session = await getSession();
+  if (!session?.imp) redirect('/admin');
+
+  const admin = await prisma.user.findUnique({
+    where: { id: session.imp },
+    select: { id: true, email: true, name: true, role: true }
+  });
+  if (!admin || admin.role !== 'ADMIN') redirect('/login');
+
+  await setSessionCookie({ uid: admin.id, role: 'ADMIN', email: admin.email, name: admin.name });
+  await recordAudit(admin.id, 'support.impersonation_ended', session.uid, { email: session.email });
+  redirect(`/admin/investors/${session.uid}`);
 }
