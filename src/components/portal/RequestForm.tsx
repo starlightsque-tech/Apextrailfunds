@@ -8,12 +8,14 @@ export default function RequestForm({
   action,
   amountLabel,
   cta,
-  hint
+  hint,
+  children
 }: {
   action: (prev: PortalState, formData: FormData) => Promise<PortalState>;
   amountLabel: string;
   cta: string;
   hint?: string;
+  children?: React.ReactNode;
 }) {
   const [state, formAction] = useFormState(action, {} as PortalState);
 
@@ -24,6 +26,7 @@ export default function RequestForm({
         <input id="amount" name="amount" type="number" min={1} step={1000} required className="input" placeholder="50000" />
         {hint ? <p className="hint">{hint}</p> : null}
       </div>
+      {children}
       <div>
         <label className="label" htmlFor="note">Note to the manager (optional)</label>
         <textarea id="note" name="note" rows={3} className="input" placeholder="Any timing or documentation requirements" />
