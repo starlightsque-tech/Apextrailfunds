@@ -51,11 +51,8 @@ npm run seed              # creates the admin from ADMIN_EMAIL / ADMIN_PASSWORD
 npm run dev
 ```
 
-Optional sample data for UI review (never on production):
-
-```bash
-npm run seed:demo         # demo.investor@example.com / demo-password-123
-```
+The app ships with no demo users, demo balances or demo programmes: the database contains only the admin
+account and default settings until real investors register and the manager publishes real programmes.
 
 ## Deploying to Render (free tier)
 
