@@ -6,6 +6,7 @@ import { logoutAction } from '@/actions/auth';
 import { getSettings } from '@/lib/settings';
 import { Badge, statusTone } from '@/components/ui/Badge';
 import PortalNav from '@/components/portal/PortalNav';
+import { stopImpersonation } from '@/actions/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,6 +67,17 @@ export default async function PortalLayout({ children }: { children: React.React
         </aside>
 
         <div className="min-w-0">
+          {session.imp ? (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-sky-400/30 bg-sky-400/[0.08] px-4 py-3">
+              <p className="text-[12.5px] text-sky-100/90">
+                <strong className="font-medium">Support access.</strong> You are viewing {user.name}’s portal as an
+                administrator. This session is read/write for support purposes and every action is logged.
+              </p>
+              <form action={stopImpersonation}>
+                <button className="btn-ghost btn-sm border-sky-300/40" type="submit">Exit to admin</button>
+              </form>
+            </div>
+          ) : null}
           {!user.emailVerified ? (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/25 bg-amber-400/[0.07] px-4 py-3">
               <p className="text-[12.5px] text-amber-100/90">
