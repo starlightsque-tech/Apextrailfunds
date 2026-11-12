@@ -5,6 +5,7 @@ import { getCapitalAccount } from '@/lib/account';
 import { money, num, date } from '@/lib/format';
 import { Badge, statusTone } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/Field';
+import TermProgress from '@/components/portal/TermProgress';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Portfolio' };
@@ -17,7 +18,7 @@ export default async function PortfolioPage() {
     prisma.position.findMany({
       where: { userId: session.uid },
       orderBy: { startedAt: 'desc' },
-      include: { plan: { select: { name: true, riskBand: true } } }
+      include: { plan: { select: { name: true, riskBand: true, termMonths: true } } }
     }),
     getCapitalAccount(session.uid),
     prisma.plan.findMany({ where: { status: 'OPEN' }, orderBy: { sortOrder: 'asc' } }),
@@ -97,6 +98,11 @@ export default async function PortfolioPage() {
                         <td>
                           <p className="text-white/90">{p.plan.name}</p>
                           <p className="text-[11px] text-mist">{p.plan.riskBand} risk · since {date(p.startedAt)}</p>
+                          {p.status === 'ACTIVE' ? (
+                            <div className="mt-2 max-w-[220px]">
+                              <TermProgress startedAt={p.startedAt.toISOString()} termMonths={p.plan.termMonths ?? null} />
+                            </div>
+                          ) : null}
                         </td>
                         <td className="text-right font-mono text-white/85">{money(p.committed, 'USD', 0)}</td>
                         <td className="text-right font-mono text-mist">{p.units ? num(p.units, 2) : '—'}</td>
