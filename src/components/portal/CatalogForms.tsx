@@ -10,10 +10,12 @@ const empty = {} as CatalogState;
 export function InterestForm({
   planId,
   min,
+  max,
   currency = 'USD'
 }: {
   planId: string;
   min: number;
+  max?: number;
   currency?: string;
 }) {
   const [state, action] = useFormState(expressInterest, empty);
@@ -22,8 +24,11 @@ export function InterestForm({
       <input type="hidden" name="planId" value={planId} />
       <div>
         <label className="label">Intended amount ({currency})</label>
-        <input name="amount" type="number" min={min} step={1000} defaultValue={min} className="input" required />
-        <p className="hint">Minimum {min.toLocaleString('en-US')}. This records interest only — no money moves here.</p>
+        <input name="amount" type="number" min={min} max={max} step={1000} defaultValue={min} className="input" required />
+        <p className="hint">
+          Minimum {min.toLocaleString('en-US')}
+          {max ? ` · maximum ${max.toLocaleString('en-US')} per investor` : ''}. This records interest only — no money moves here.
+        </p>
       </div>
       <div>
         <label className="label">Note (optional)</label>
