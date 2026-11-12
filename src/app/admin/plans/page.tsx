@@ -48,7 +48,8 @@ export default async function AdminPlansPage({ searchParams }: { searchParams: {
                     <div>
                       <p className="text-[13.5px] text-white/90">{p.name}</p>
                       <p className="text-[11.5px] text-mist">
-                        {money(p.minAmount, 'USD', 0)} min · {p.liquidityDays}d notice · {p.riskBand} · {date(p.createdAt)}
+                        {money(p.minAmount, 'USD', 0)} min · {p.maxAmount ? `${money(p.maxAmount, 'USD', 0)} max` : 'no cap'} ·{' '}
+                        {p.termMonths ? `${p.termMonths}mo` : 'open-ended'} · {p.liquidityDays}d notice · {date(p.createdAt)}
                       </p>
                     </div>
                     <Badge tone={p.status === 'OPEN' ? 'green' : p.status === 'DRAFT' ? 'amber' : 'neutral'}>{p.status}</Badge>
