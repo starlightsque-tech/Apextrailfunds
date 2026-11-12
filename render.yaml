@@ -40,8 +40,11 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
+      # Must be an ACTIVE sender in Brevo (Senders & IP -> Senders).
+      # Authenticate the apextrailfunds.com domain in Brevo before switching to
+      # no-reply@apextrailfunds.com; until then Brevo will reject that sender.
       - key: EMAIL_FROM
-        value: no-reply@apextrailfunds.com
+        value: supportagent.360@gmail.com
       - key: NEXT_PUBLIC_TAWK_PROPERTY_ID
         value: 6af50a019d9ba43c443be7ac
       - key: NEXT_PUBLIC_TAWK_WIDGET_ID
