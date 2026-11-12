@@ -1,0 +1,44 @@
+# Render blueprint — https://render.com/docs/blueprint-spec
+# Create a Blueprint from this repo and Render provisions the database, web service
+# and environment wiring in one step.
+databases:
+  - name: apextrailfunds-db
+    databaseName: apextrailfunds
+    user: apextrailfunds
+    plan: basic-256mb
+    region: frankfurt
+
+services:
+  - type: web
+    name: apextrailfunds
+    runtime: node
+    plan: starter
+    region: frankfurt
+    branch: main
+    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npm run seed && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: apextrailfunds-db
+          property: connectionString
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: APP_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: no-reply@apextrailfunds.com
+      - key: NEXT_PUBLIC_TAWK_PROPERTY_ID
+        value: 6af50a019d9ba43c443be7ac
+      - key: NEXT_PUBLIC_TAWK_WIDGET_ID
+        value: 1k76iu5hr
