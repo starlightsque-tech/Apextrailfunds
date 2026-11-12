@@ -21,15 +21,25 @@ custodian confirms settlement.
 Performance is only ever the manager's published monthly figures; there are no projected, backtested or
 "guaranteed" returns anywhere in the code.
 
-**Investor onboarding** — application form (eligibility, experience, intended commitment), account creation,
-email confirmation, manager review, approval email, custodian subscription handoff.
+**Accounts** — `/signup` creates an account (name, email, phone, country, password, optional referral code) and
+`/login` signs in with email + password. Eligibility is a separate, reviewed step at `/apply` once signed in:
+account creation never grants investment access and never accepts funds.
 
-**Investor portal** — capital account summary derived from ledger entries, full ledger, subscription and
-redemption requests, documents (including private per-investor statements), profile and password management.
+**Investor onboarding** — application form (eligibility, experience, intended commitment), email confirmation,
+manager review, approval email, custodian subscription handoff.
 
-**Admin** — application review, investor management and suspension, capital-entry posting, request queue,
-monthly performance publishing (draft/published), document uploads with visibility rules, broadcast email
-with unsubscribe, per-investor email, settings, and an audit log.
+**Investor portal** — portfolio dashboard (positions, estimated value, allocation), capital-account ledger,
+programme catalogue and expressions of interest, funding instructions, saved payout destinations, subscription
+and redemption requests, documents (including private per-investor statements), profile and password management.
+
+**Admin** — application review, investor management and suspension, investment-programme CRUD (draft/open/closed),
+funding-account CRUD with an explicit "custodian verified" attestation, position recording per investor, request
+queue with payout destinations, monthly performance publishing (draft/published), document uploads with visibility
+rules, broadcast email with unsubscribe, per-investor email, settings, and an audit log.
+
+**Support access** — an administrator can sign in as an investor without their password from the investor's admin
+page. The portal shows a persistent "Support access" banner, profile and password changes are blocked during the
+session, and both the start and the exit are written to the audit log.
 
 ## Local setup
 
@@ -114,3 +124,6 @@ is the fastest way to diagnose an unverified sender or a revoked key.
 - `AUTH_SECRET` must be 32+ random characters; the app refuses to sign sessions without it.
 - Document access is enforced server-side per visibility; private files are owner-or-admin only.
 - All admin mutations are role-checked server-side and written to the audit log.
+- Impersonated sessions carry an `imp` claim; they cannot change the investor's password, profile or payout
+  destinations, and exiting restores the administrator's own session only after re-checking the role in the database.
+- Payout destinations are masked in the investor UI (last four) and fully visible only to administrators.
