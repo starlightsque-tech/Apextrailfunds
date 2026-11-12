@@ -1,6 +1,7 @@
 import { getSession } from '@/lib/session';
 import { prisma } from '@/lib/prisma';
 import { getSettings } from '@/lib/settings';
+import Link from 'next/link';
 import { getCapitalAccount } from '@/lib/account';
 import { money, date } from '@/lib/format';
 import { createRedemptionRequest } from '@/actions/portal';
@@ -14,10 +15,11 @@ export default async function RedeemPage() {
   const session = await getSession();
   if (!session) return null;
 
-  const [settings, account, existing] = await Promise.all([
+  const [settings, account, existing, payouts] = await Promise.all([
     getSettings(),
     getCapitalAccount(session.uid),
-    prisma.redemptionRequest.findMany({ where: { userId: session.uid }, orderBy: { createdAt: 'desc' }, take: 5 })
+    prisma.redemptionRequest.findMany({ where: { userId: session.uid }, orderBy: { createdAt: 'desc' }, take: 5 }),
+    prisma.payoutMethod.findMany({ where: { userId: session.uid }, orderBy: { createdAt: 'desc' } })
   ]);
 
   return (
@@ -38,12 +40,32 @@ export default async function RedeemPage() {
             <span className="text-[12.5px] text-mist">Available (custodian-confirmed)</span>
             <span className="font-mono text-[14px] text-white">{money(account.nav, 'USD', 0)}</span>
           </div>
-          <RequestForm
-            action={createRedemptionRequest}
-            amountLabel="Redemption amount (USD)"
-            cta="Submit redemption request"
-            hint={`Notice period: ${settings.liquidityNoticeDays} days. Partial redemptions are permitted.`}
-          />
+          {payouts.length === 0 ? (
+            <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.07] p-4">
+              <p className="text-[12.5px] text-amber-100/90">
+                Add a payout destination before requesting a redemption.
+              </p>
+              <Link href="/portal/payouts" className="btn-ghost btn-sm mt-3">Add payout destination</Link>
+            </div>
+          ) : (
+            <RequestForm
+              action={createRedemptionRequest}
+              amountLabel="Redemption amount (USD)"
+              cta="Submit redemption request"
+              hint={`Notice period: ${settings.liquidityNoticeDays} days. Partial redemptions are permitted.`}
+            >
+              <div>
+                <label className="label" htmlFor="payoutMethodId">Pay out to</label>
+                <select id="payoutMethodId" name="payoutMethodId" className="input" required>
+                  {payouts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.label} · {p.kind === 'BANK_ACCOUNT' ? 'Bank' : 'Wallet'} · {p.currency}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </RequestForm>
+          )}
         </div>
 
         <div className="card p-5">
