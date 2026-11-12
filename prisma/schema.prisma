@@ -238,6 +238,8 @@ model Plan {
   strategy       String
   riskBand       String     @default("Medium")
   minAmount      Int
+  /// Maximum an individual investor may allocate to this programme.
+  maxAmount      Int?
   targetSize     Int?
   termMonths     Int?
   liquidityDays  Int        @default(30)
