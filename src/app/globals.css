@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* { -webkit-font-smoothing: antialiased; }
+
+body {
+  background: #07080a;
+  color: #e8eaee;
+}
+
+::selection { background: rgba(216, 178, 90, 0.3); }
+
+@layer components {
+  .container-x { @apply mx-auto w-full max-w-6xl px-5 sm:px-8; }
+
+  .glass {
+    background: rgba(10, 11, 14, 0.72);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .card {
+    @apply rounded-2xl border border-line bg-surface;
+    box-shadow: 0 20px 50px -40px rgba(0, 0, 0, 1);
+  }
+
+  .card-hover { @apply transition-colors duration-200 hover:border-white/15; }
+
+  .eyebrow {
+    @apply text-[11px] font-medium uppercase tracking-[0.22em] text-gold/90;
+  }
+
+  .h1 { @apply text-4xl font-semibold leading-[1.05] tracking-[-0.02em] sm:text-5xl md:text-6xl; }
+  .h2 { @apply text-2xl font-semibold tracking-[-0.015em] sm:text-3xl; }
+  .h3 { @apply text-lg font-medium; }
+  .body { @apply text-[15px] leading-relaxed text-mist; }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary { @apply btn bg-gold text-ink hover:bg-gold-soft; }
+  .btn-ghost { @apply btn border border-line bg-white/[0.03] text-white hover:border-white/20 hover:bg-white/[0.06]; }
+  .btn-dark { @apply btn bg-white text-ink hover:bg-white/90; }
+  .btn-sm { @apply px-3.5 py-2 text-[13px]; }
+
+  .label { @apply mb-1.5 block text-[13px] font-medium text-white/80; }
+  .input {
+    @apply w-full rounded-xl border border-line bg-ink/60 px-3.5 py-2.5 text-[15px] text-white placeholder-white/25
+    outline-none transition focus:border-gold/60 focus:ring-2 focus:ring-gold/15;
+  }
+  .hint { @apply mt-1.5 text-[12px] leading-relaxed text-mist; }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[11px] font-medium;
+  }
+
+  .table-x { @apply w-full border-collapse text-[13.5px]; }
+  .table-x th { @apply border-b border-line px-3 py-2.5 text-left text-[11px] font-medium uppercase tracking-[0.14em] text-mist; }
+  .table-x td { @apply border-b border-white/[0.05] px-3 py-3 align-middle text-white/85; }
+
+  .hairline { @apply border-t border-line; }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+    background-size: 64px 64px;
+  }
+  .glow {
+    background: radial-gradient(60% 60% at 50% 0%, rgba(216, 178, 90, 0.16) 0%, rgba(216, 178, 90, 0) 70%);
+  }
+}
