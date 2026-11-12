@@ -270,3 +270,54 @@ export async function expressInterest(_prev: CatalogState, formData: FormData): 
   revalidatePath('/portal/portfolio');
   return { ok: 'Interest recorded. The manager will confirm eligibility and funding instructions.' };
 }
+
+
+/**
+ * Settle a matured position. Capital is only released, and only a realised gain is
+ * credited, when the manager records the custodian's settlement — the app never
+ * mints profit on a timer.
+ */
+export async function maturePosition(_prev: CatalogState, formData: FormData): Promise<CatalogState> {
+  const session = await requireAdmin();
+  const id = String(formData.get('id') ?? '');
+  const realizedGain = Number(formData.get('realizedGain') ?? 0);
+  const reference = String(formData.get('reference') ?? '').slice(0, 200);
+  const dateValue = String(formData.get('date') ?? '') || new Date().toISOString().slice(0, 10);
+
+  if (!Number.isFinite(realizedGain) || realizedGain < 0) return { error: 'Enter a valid realised gain (0 if none).' };
+  if (!reference.trim()) return { error: 'Record the custodian settlement reference.' };
+
+  const position = await prisma.position.findUnique({ where: { id }, include: { plan: true } });
+  if (!position) return { error: 'Position not found.' };
+  if (position.status === 'CLOSED') return { error: 'That position is already closed.' };
+
+  await prisma.$transaction(async (tx) => {
+    await tx.position.update({
+      where: { id },
+      data: { status: 'CLOSED', endedAt: new Date(`${dateValue}T12:00:00Z`) }
+    });
+    if (realizedGain > 0) {
+      await tx.ledgerEntry.create({
+        data: {
+          userId: position.userId,
+          date: new Date(`${dateValue}T12:00:00Z`),
+          type: 'DISTRIBUTION',
+          amount: realizedGain,
+          memo: `Realised gain — ${position.plan.name} — ${reference}`,
+          createdBy: session.email
+        }
+      });
+    }
+  });
+
+  await recordAudit(session.uid, 'position.matured', id, { realizedGain, reference });
+  revalidatePath(`/admin/investors/${position.userId}`);
+  revalidatePath('/portal/portfolio');
+  revalidatePath('/portal/account');
+  return {
+    ok:
+      realizedGain > 0
+        ? `Position matured. Capital released and ${realizedGain.toFixed(2)} USD realised gain posted.`
+        : 'Position matured and capital released. No gain posted.'
+  };
+}
