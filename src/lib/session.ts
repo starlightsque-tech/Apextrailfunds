@@ -8,6 +8,8 @@ export type SessionPayload = {
   role: 'ADMIN' | 'INVESTOR';
   email: string;
   name: string;
+  /** Set when an administrator is viewing an investor's account (support access). */
+  imp?: string;
 };
 
 function key() {
@@ -34,7 +36,8 @@ export async function readToken(token: string): Promise<SessionPayload | null> {
       uid: String(payload.uid),
       role: payload.role === 'ADMIN' ? 'ADMIN' : 'INVESTOR',
       email: String(payload.email ?? ''),
-      name: String(payload.name ?? '')
+      name: String(payload.name ?? ''),
+      imp: payload.imp ? String(payload.imp) : undefined
     };
   } catch {
     return null;
