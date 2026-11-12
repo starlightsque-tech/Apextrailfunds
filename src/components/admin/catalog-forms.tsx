@@ -29,6 +29,7 @@ type PlanValues = {
   strategy?: string;
   riskBand?: string;
   minAmount?: number;
+  maxAmount?: number | null;
   targetSize?: number | null;
   termMonths?: number | null;
   liquidityDays?: number;
@@ -76,6 +77,10 @@ export function PlanForm({ plan }: { plan?: PlanValues }) {
       <div>
         <label className="label">Minimum (USD)</label>
         <input name="minAmount" type="number" min={1} defaultValue={plan?.minAmount ?? 25000} className="input" required />
+      </div>
+      <div>
+        <label className="label">Maximum per investor (USD, optional)</label>
+        <input name="maxAmount" type="number" min={0} defaultValue={plan?.maxAmount ?? ''} className="input" />
       </div>
       <div>
         <label className="label">Target size (USD, optional)</label>
