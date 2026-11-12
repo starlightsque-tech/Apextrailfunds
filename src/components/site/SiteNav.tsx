@@ -6,6 +6,7 @@ import { Menu, X } from 'lucide-react';
 
 const LINKS = [
   { href: '/strategy', label: 'Strategy' },
+  { href: '/plans', label: 'Programmes' },
   { href: '/performance', label: 'Performance' },
   { href: '/fees', label: 'Fees' },
   { href: '/documents', label: 'Documents' },
@@ -40,8 +41,8 @@ export default function SiteNav({ loggedIn }: { loggedIn: boolean }) {
           <Link href={loggedIn ? '/portal' : '/login'} className="text-[13.5px] text-white/70 transition hover:text-white">
             {loggedIn ? 'Portal' : 'Investor login'}
           </Link>
-          <Link href="/apply" className="btn-primary btn-sm">
-            Apply for access
+          <Link href="/signup" className="btn-primary btn-sm">
+            Create account
           </Link>
         </div>
 
@@ -71,8 +72,8 @@ export default function SiteNav({ loggedIn }: { loggedIn: boolean }) {
             <Link href={loggedIn ? '/portal' : '/login'} onClick={() => setOpen(false)} className="py-3 text-sm text-white/75">
               {loggedIn ? 'Investor portal' : 'Investor login'}
             </Link>
-            <Link href="/apply" onClick={() => setOpen(false)} className="btn-primary mt-3">
-              Apply for access
+            <Link href="/signup" onClick={() => setOpen(false)} className="btn-primary mt-3">
+              Create account
             </Link>
           </div>
         </div>
