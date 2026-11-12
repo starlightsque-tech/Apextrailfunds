@@ -8,6 +8,8 @@ const ITEMS = [
   { href: '/admin/applications', label: 'Applications' },
   { href: '/admin/investors', label: 'Investors' },
   { href: '/admin/requests', label: 'Requests' },
+  { href: '/admin/plans', label: 'Programmes' },
+  { href: '/admin/funding', label: 'Funding accounts' },
   { href: '/admin/ledger', label: 'Capital entries' },
   { href: '/admin/performance', label: 'Performance' },
   { href: '/admin/documents', label: 'Documents' },
