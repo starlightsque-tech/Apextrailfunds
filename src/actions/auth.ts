@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
@@ -12,80 +13,114 @@ import {
   sendPasswordResetEmail
 } from '@/lib/email';
 import { recordAudit } from '@/lib/audit';
+import { resolveReferral, uniqueReferralCode } from '@/lib/referral';
 
 export type FormState = { error?: string; ok?: string };
 
-const registerSchema = z.object({
-  name: z.string().min(2).max(120),
-  email: z.string().email(),
+const signupSchema = z.object({
+  name: z.string().min(2, 'Enter your full name').max(120),
+  email: z.string().email('Enter a valid email address'),
   password: z.string().min(10, 'Use at least 10 characters'),
-  country: z.string().min(2).max(80),
-  phone: z.string().max(40).optional().or(z.literal('')),
-  entityType: z.string().min(2),
-  experience: z.string().min(2),
-  intendedAmount: z.coerce.number().int().min(1).max(1_000_000_000),
-  referrer: z.string().max(120).optional().or(z.literal('')),
-  accredited: z.coerce.boolean().optional(),
-  terms: z.coerce.boolean().optional()
+  confirm: z.string(),
+  country: z.string().min(2, 'Select your country').max(80),
+  phone: z.string().min(5, 'Enter a phone number').max(40),
+  referralCode: z.string().max(20).optional().or(z.literal(''))
 });
 
-export async function registerAction(_prev: FormState, formData: FormData): Promise<FormState> {
-  const parsed = registerSchema.safeParse({
+export async function signupAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = signupSchema.safeParse({
     name: formData.get('name'),
     email: formData.get('email'),
     password: formData.get('password'),
+    confirm: formData.get('confirm'),
     country: formData.get('country'),
     phone: formData.get('phone'),
-    entityType: formData.get('entityType'),
-    experience: formData.get('experience'),
-    intendedAmount: formData.get('intendedAmount'),
-    referrer: formData.get('referrer'),
-    accredited: formData.get('accredited') === 'on',
-    terms: formData.get('terms') === 'on'
+    referralCode: formData.get('referralCode')
   });
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Please check the form and try again.' };
   }
-  if (!parsed.data.terms) return { error: 'You must confirm that you have read the risk disclosure.' };
-  if (!parsed.data.accredited) return { error: 'This programme is limited to professional or high-net-worth investors.' };
+  if (parsed.data.password !== parsed.data.confirm) return { error: 'Passwords do not match.' };
 
   const email = parsed.data.email.toLowerCase();
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return { error: 'An account with this email already exists. Sign in instead.' };
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const referredBy = await resolveReferral(parsed.data.referralCode);
 
   const user = await prisma.user.create({
     data: {
       email,
-      passwordHash,
-      name: parsed.data.name,
+      passwordHash: await bcrypt.hash(parsed.data.password, 12),
+      name: parsed.data.name.trim(),
       country: parsed.data.country,
-      phone: parsed.data.phone || null,
+      phone: parsed.data.phone.trim(),
       status: 'APPLICANT',
       emailVerified: false,
-      application: {
-        create: {
-          entityType: parsed.data.entityType,
-          country: parsed.data.country,
-          accredited: true,
-          experience: parsed.data.experience,
-          intendedAmount: parsed.data.intendedAmount,
-          referrer: parsed.data.referrer || null,
-          status: 'PENDING'
-        }
-      }
+      referralCode: await uniqueReferralCode(),
+      referredBy
     }
   });
 
   await setSessionCookie({ uid: user.id, role: 'INVESTOR', email: user.email, name: user.name });
-  await Promise.allSettled([
-    sendVerificationEmail(user),
-    sendApplicationReceived(user)
-  ]);
-  await recordAudit(user.id, 'application.submitted', user.id, { entityType: parsed.data.entityType });
+  await Promise.allSettled([sendVerificationEmail(user)]);
+  await recordAudit(user.id, 'account.created', user.id, { referredBy: Boolean(referredBy) });
 
+  redirect('/portal');
+}
+
+const applicationSchema = z.object({
+  entityType: z.string().min(2),
+  experience: z.string().min(2),
+  intendedAmount: z.coerce.number().int().min(1).max(1_000_000_000),
+  country: z.string().min(2).max(80),
+  accredited: z.coerce.boolean().optional(),
+  terms: z.coerce.boolean().optional(),
+  referrer: z.string().max(120).optional().or(z.literal(''))
+});
+
+export async function submitApplicationAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const session = await getSession();
+  if (!session) return { error: 'Sign in to continue.' };
+
+  const parsed = applicationSchema.safeParse({
+    entityType: formData.get('entityType'),
+    experience: formData.get('experience'),
+    intendedAmount: formData.get('intendedAmount'),
+    country: formData.get('country'),
+    accredited: formData.get('accredited') === 'on',
+    terms: formData.get('terms') === 'on',
+    referrer: formData.get('referrer')
+  });
+
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Please check the form.' };
+  if (!parsed.data.terms) return { error: 'You must confirm that you have read the risk disclosure.' };
+  if (!parsed.data.accredited) return { error: 'This programme is limited to professional or high-net-worth investors.' };
+
+  const user = await prisma.user.findUnique({ where: { id: session.uid }, include: { application: true } });
+  if (!user) return { error: 'Account not found.' };
+  if (user.application) return { error: 'You already have an application on file.' };
+
+  await prisma.application.create({
+    data: {
+      userId: user.id,
+      entityType: parsed.data.entityType,
+      country: parsed.data.country,
+      accredited: true,
+      experience: parsed.data.experience,
+      intendedAmount: parsed.data.intendedAmount,
+      referrer: parsed.data.referrer || null,
+      status: 'PENDING'
+    }
+  });
+  if (user.phone || user.country === parsed.data.country) {
+    await prisma.user.update({ where: { id: user.id }, data: { country: parsed.data.country } });
+  }
+
+  await Promise.allSettled([sendApplicationReceived(user)]);
+  await recordAudit(user.id, 'application.submitted', user.id, { entityType: parsed.data.entityType });
+  revalidatePath('/portal');
   redirect('/apply-submitted');
 }
 
@@ -173,6 +208,7 @@ export async function resendVerificationAction(): Promise<FormState> {
 export async function updateProfileAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await getSession();
   if (!session) return { error: 'Sign in first.' };
+  if (session.imp) return { error: 'Profile changes are disabled while support access is active.' };
 
   const name = String(formData.get('name') ?? '').trim();
   const phone = String(formData.get('phone') ?? '').trim();
@@ -190,6 +226,7 @@ export async function updateProfileAction(_prev: FormState, formData: FormData):
 export async function changePasswordAction(_prev: FormState, formData: FormData): Promise<FormState> {
   const session = await getSession();
   if (!session) return { error: 'Sign in first.' };
+  if (session.imp) return { error: 'Password changes are disabled while support access is active.' };
 
   const current = String(formData.get('current') ?? '');
   const next = String(formData.get('next') ?? '');
