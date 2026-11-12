@@ -1,12 +1,39 @@
-import ApplyForm from '@/components/forms/ApplyForm';
+import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { getSession } from '@/lib/session';
+import { prisma } from '@/lib/prisma';
 import { getSettings } from '@/lib/settings';
-import { money } from '@/lib/format';
+import { money, date } from '@/lib/format';
+import ApplicationForm from '@/components/forms/ApplicationForm';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Apply for access' };
 
 export default async function ApplyPage() {
-  const s = await getSettings();
+  const session = await getSession();
+  if (!session) redirect('/signup');
+  if (session.role === 'ADMIN') redirect('/admin');
+
+  const [settings, user] = await Promise.all([
+    getSettings(),
+    prisma.user.findUnique({ where: { id: session.uid }, include: { application: true } })
+  ]);
+  if (!user) redirect('/login');
+
+  if (user.application) {
+    return (
+      <div className="container-x flex justify-center py-20">
+        <div className="w-full max-w-lg text-center">
+          <h1 className="text-2xl font-semibold tracking-tight">Application already on file</h1>
+          <p className="body mt-3">
+            Submitted {date(user.application.createdAt)} · status <strong className="text-white">{user.application.status}</strong>.
+            You can follow progress in your portal.
+          </p>
+          <Link href="/portal" className="btn-primary mt-7">Go to portal</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container-x py-14 sm:py-20">
@@ -15,14 +42,14 @@ export default async function ApplyPage() {
           <p className="eyebrow">Application</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">Apply for access</h1>
           <p className="body mt-5">
-            This is a reviewed application, not a signup. Tell us who you are and how you invest; the manager reviews
-            each application and confirms eligibility before any documents or subscription instructions are released.
+            Signed in as {user.email}. Tell us how you invest and the manager will review eligibility. Approval releases
+            the offering documents and funding instructions — not a payment address.
           </p>
 
           <div className="mt-8 space-y-4">
             {[
-              { k: 'Minimum commitment', v: money(Number(s.minSubscription), 'USD', 0) },
-              { k: 'Liquidity', v: `${s.liquidityNoticeDays}-day notice` },
+              { k: 'Minimum commitment', v: money(Number(settings.minSubscription), 'USD', 0) },
+              { k: 'Liquidity', v: `${settings.liquidityNoticeDays}-day notice` },
               { k: 'Eligibility', v: 'Professional / high-net-worth investors' },
               { k: 'Verification', v: 'Identity and source of funds, before funding' }
             ].map((r) => (
@@ -32,20 +59,10 @@ export default async function ApplyPage() {
               </div>
             ))}
           </div>
-
-          <div className="mt-8 rounded-xl border border-line bg-white/[0.02] p-5">
-            <p className="text-[13px] font-medium text-white/85">What happens after you apply</p>
-            <ol className="mt-3 space-y-2 text-[12.5px] leading-relaxed text-mist">
-              <li>1. You receive a confirmation email and a portal account.</li>
-              <li>2. The manager reviews your answers and may request documents.</li>
-              <li>3. If approved, you receive the offering documents and custodian subscription instructions.</li>
-              <li>4. We never ask you to send funds to a wallet address in an email.</li>
-            </ol>
-          </div>
         </div>
 
         <div className="card p-6 sm:p-8">
-          <ApplyForm minSubscription={s.minSubscription} />
+          <ApplicationForm minSubscription={settings.minSubscription} country={user.country ?? ''} />
         </div>
       </div>
     </div>
