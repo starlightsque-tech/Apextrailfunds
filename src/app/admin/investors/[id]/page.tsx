@@ -5,6 +5,8 @@ import { getCapitalAccount } from '@/lib/account';
 import { date, money, num } from '@/lib/format';
 import { Badge, statusTone } from '@/components/ui/Badge';
 import { StatusForm, LedgerForm, DeleteEntryForm, UserEmailForm } from '@/components/admin/forms';
+import { PositionForm, ClosePositionForm } from '@/components/admin/catalog-forms';
+import { startImpersonation } from '@/actions/admin';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,13 +17,16 @@ export default async function InvestorDetail({ params }: { params: { id: string 
       application: true,
       subscriptions: { orderBy: { createdAt: 'desc' } },
       redemptions: { orderBy: { createdAt: 'desc' } },
-      documents: { select: { id: true, title: true, createdAt: true } }
+      documents: { select: { id: true, title: true, createdAt: true } },
+      positions: { orderBy: { startedAt: 'desc' }, include: { plan: true } },
+      payoutMethods: { orderBy: { createdAt: 'desc' } }
     }
   });
   if (!user) notFound();
 
   const account = await getCapitalAccount(user.id);
   const today = new Date().toISOString().slice(0, 10);
+  const plans = await prisma.plan.findMany({ where: { status: { not: 'CLOSED' } }, orderBy: { sortOrder: 'asc' } });
 
   return (
     <div className="space-y-6">
@@ -31,9 +36,15 @@ export default async function InvestorDetail({ params }: { params: { id: string 
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">{user.name}</h1>
           <p className="mt-1 text-[13px] text-mist">{user.email} · {user.country ?? '—'} · joined {date(user.createdAt)}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge tone={statusTone(user.status)}>{user.status}</Badge>
           <StatusForm userId={user.id} status={user.status} />
+          <form action={startImpersonation}>
+            <input type="hidden" name="userId" value={user.id} />
+            <button className="btn-ghost btn-sm border-sky-300/30 text-sky-200" type="submit">
+              Sign in as investor
+            </button>
+          </form>
         </div>
       </div>
 
@@ -128,6 +139,62 @@ export default async function InvestorDetail({ params }: { params: { id: string 
           <p className="mt-5 text-[11.5px] leading-relaxed text-white/35">
             Documents released privately: {user.documents.length}. Email verification:{' '}
             {user.emailVerified ? 'confirmed' : 'not confirmed'}.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <div className="card overflow-hidden">
+          <div className="border-b border-line px-5 py-4">
+            <p className="text-[13.5px] font-medium text-white">Positions</p>
+          </div>
+          <table className="table-x">
+            <thead><tr><th>Programme</th><th className="text-right">Committed</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              {user.positions.length === 0 ? (
+                <tr><td colSpan={4} className="py-6 text-center text-[12px] text-mist">No positions recorded.</td></tr>
+              ) : user.positions.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <p className="text-white/90">{p.plan.name}</p>
+                    <p className="text-[11px] text-mist">{date(p.startedAt)}</p>
+                  </td>
+                  <td className="text-right font-mono text-white/85">{money(p.committed, 'USD', 0)}</td>
+                  <td><Badge tone={p.status === 'ACTIVE' ? 'green' : 'neutral'}>{p.status}</Badge></td>
+                  <td className="text-right">{p.status === 'ACTIVE' ? <ClosePositionForm id={p.id} /> : null}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="border-t border-line p-5">
+            {plans.length === 0 ? (
+              <p className="text-[12px] text-mist">
+                Create an open programme first in <Link href="/admin/plans" className="text-gold hover:underline">Programmes</Link>.
+              </p>
+            ) : (
+              <PositionForm userId={user.id} today={today} plans={plans.map((p) => ({ id: p.id, name: p.name, minAmount: p.minAmount }))} />
+            )}
+          </div>
+        </div>
+
+        <div className="card p-5">
+          <p className="text-[13.5px] font-medium text-white">Payout destinations</p>
+          {user.payoutMethods.length === 0 ? (
+            <p className="mt-2 text-[12.5px] text-mist">None registered.</p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {user.payoutMethods.map((p) => (
+                <div key={p.id} className="rounded-lg border border-line px-3 py-2">
+                  <p className="text-[12.5px] text-white/85">{p.label} · {p.currency}</p>
+                  <p className="break-all font-mono text-[11px] text-mist">
+                    {p.accountName} · {p.iban || p.accountNumber || p.walletAddress} {p.network ? `(${p.network})` : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-4 text-[11px] leading-relaxed text-white/35">
+            Payout details are visible to administrators only. Payment must match the account holder name above.
           </p>
         </div>
       </div>
